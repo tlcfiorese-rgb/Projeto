@@ -1,0 +1,19 @@
+{
+  "fonte": "Banco Central do Brasil - Sistema Gerenciador de Series Temporais (SGS)",
+  "url_base": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados",
+  "series": {
+    "selic": 432,
+    "cambio": 1,
+    "ipca": 433
+  },
+  "periodo_consultado": {
+    "data_inicial": "16/08/2016",
+    "data_final": "15/08/2026"
+  },
+  "arquivos_bronze": [
+    "selic_20260820.json",
+    "cambio_20260820.json",
+    "ipca_20260820.json"
+  ],
+  "extraido_em": "2026-08-20T17:43:09.069914"
+}

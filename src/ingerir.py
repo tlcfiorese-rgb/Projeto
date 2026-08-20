@@ -4,8 +4,8 @@ import json
 import requests
 
 URL_BASE = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
-# Este script fica em src/ e roda a partir da RAIZ do projeto
-BRONZE = Path("dados/bronze/bcb")
+# Este script roda de DENTRO de dados/bronze, entao o caminho eh so ate "bcb"
+BRONZE = Path("bcb")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
