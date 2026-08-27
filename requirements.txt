@@ -1,3 +1,6 @@
 pandas
 requests
 datetime
+kagglehub
+fg-data-profiling
+setuptools<82
