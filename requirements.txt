@@ -4,3 +4,4 @@ datetime
 kagglehub
 fg-data-profiling
 setuptools<82
+pyarrow
