@@ -24,3 +24,20 @@
 - Coluna 'valor' convertida de texto para numero (float).
 - Nenhum extremo detectado por IQR ou z-score no periodo
   analisado (2016-2026).
+
+## Atributos derivados
+
+### selic_variacao_pct / cambio_variacao_pct
+Variacao percentual diaria em relacao ao dia anterior. Serve para
+identificar dias de mudanca de patamar (reunioes do COPOM na Selic,
+valorizacao/desvalorizacao do real no cambio) em vez de olhar so o nivel.
+Exemplo: a coluna capturou corretamente o ciclo de alta da Selic entre
+11/2024 e 06/2025 (11,25% -> 15,00%) e o inicio do ciclo de corte a
+partir de 03/2026, com os dias de variacao coincidindo com as datas
+de reuniao do COPOM.
+
+### ipca_acumulado_12m
+Inflacao acumulada em 12 meses (juros compostos), a metrica padrao de
+mercado para comparar com a Selic. Ausente nos primeiros 11 meses da
+serie, por definicao (nao ha 12 meses anteriores para acumular).
+Valores recentes (mar-jul/2026) na faixa de 4,1% a 4,7%.
