@@ -4,7 +4,7 @@ import json
 import requests
 
 URL_BASE = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
-# Este script roda de DENTRO de dados/bronze, entao o caminho eh so ate "bcb"
+
 BRONZE = Path("bcb")
 
 HEADERS = {

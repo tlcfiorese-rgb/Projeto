@@ -4,7 +4,7 @@ import json
 import requests
 
 URL_BASE = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
-# Este script fica em src/ e roda a partir da RAIZ do projeto
+
 BRONZE = Path("dados/bronze/bcb")
 
 HEADERS = {
