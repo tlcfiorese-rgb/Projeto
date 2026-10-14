@@ -5,7 +5,7 @@ import requests
 
 URL_BASE = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
 
-BRONZE = Path("bcb")
+BRONZE = Path("dados/bronze/bcb")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -21,7 +21,8 @@ DATA_INICIAL = "16/08/2016"
 DATA_FINAL = "15/08/2026"
 
 
-def buscar(codigo):
+    # Chama a API do BC e traz os dados brutos
+def buscar(codigo): 
     """Busca uma serie na API do Banco Central, sem alterar nada."""
     params = {
         "formato": "json",
@@ -38,14 +39,15 @@ def buscar(codigo):
     return r.json()
 
 
-def conferir(dados, nome_serie):
+    # Confere se a resposta não veio vazia, antes de salvar
+def conferir(dados, nome_serie): 
     """Confere se a resposta veio como esperado antes de salvar."""
     print(f"{nome_serie}: {len(dados)} registros recebidos")
     if len(dados) == 0:
         raise ValueError(f"{nome_serie} veio vazia, verifique a URL/datas")
     return dados
 
-
+    # Grava o JSON bruto, com data no nome do arquivo
 def salvar(dados, nome_serie):
     """Salva o JSON bruto na bronze, exatamente como veio da fonte."""
     BRONZE.mkdir(parents=True, exist_ok=True)
@@ -55,7 +57,7 @@ def salvar(dados, nome_serie):
     print(f"{nome_serie}: salvo em {destino}")
     return destino
 
-
+    # Escreve o arquivo de proveniencia: de onde veio, quando foi extraído
 def registrar(arquivos_gerados):
     """Registra a proveniencia de toda a extracao (as tres series juntas)."""
     info = {

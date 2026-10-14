@@ -9,7 +9,7 @@ PRATA = RAIZ_PROJETO / "dados" / "prata"
 
 SERIES = ["selic", "cambio", "ipca"]
 
-
+    # Lê o arquivo mais recente da bronze
 def carregar(nome_serie):
     """Acha o arquivo mais recente da serie e le o JSON bruto da bronze."""
     padrao = f"{nome_serie}_*.json"
@@ -28,7 +28,7 @@ def carregar(nome_serie):
 
     return df, caminho
 
-
+    # Transforma 'valor' e 'data' de texto para numero e data, respectivamente
 def converter_tipos(df):
     """A API devolve 'valor' e 'data' como texto. Converte para os tipos reais.
     errors='coerce' vira ausente o que nao for convertivel, em vez de
@@ -37,7 +37,7 @@ def converter_tipos(df):
     df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
     return df
 
-
+    # Confirma que não existe data duplicada
 def conferir_chave(df, chave="data"):
     """Numa serie temporal, a chave e a propria data: um valor por dia.
     Chave repetida aqui seria sintoma de erro na extracao, nao normalidade."""
@@ -54,7 +54,7 @@ def limites_iqr(serie):
     iqr = q3 - q1
     return q1 - 1.5 * iqr, q3 + 1.5 * iqr
 
-
+    # Identifica pontos fora do padrão pelo método IQR - sem remover
 def marcar_extremos(df, coluna):
     """Marca extremos por IQR. Nao remove - Selic e IPCA tem historico de
     juros muito altos (ex: crise de 2015-16) e isso e dado real, nao erro."""
@@ -63,7 +63,7 @@ def marcar_extremos(df, coluna):
     print(coluna, "extremos (IQR):", df[coluna + "_extremo"].sum())
     return df
 
-
+    # Refaz a mesma checagem por outro método, para comparar divergências
 def marcar_zscore(df, coluna, limite=3):
     """Segundo metodo, para comparar com o IQR. Onde os dois discordam
     vale olhar a linha antes de decidir."""
@@ -72,7 +72,7 @@ def marcar_zscore(df, coluna, limite=3):
     print(coluna, "z acima de", limite, ":", df[coluna + "_z"].sum())
     return df
 
-
+    # Grava a tabela tratada em Parquet, na camada prata
 def salvar(df, nome_serie):
     """Grava a Prata em Parquet. Sem data no nome: a Prata e reconstruivel,
     cada execucao substitui a anterior."""
@@ -82,7 +82,7 @@ def salvar(df, nome_serie):
     print("salvo em:", destino, df.shape)
     return destino
 
-
+    # Registra as decisões tomadas, não só o resultado final
 def registrar(nome_serie, origem, destino, antes, depois, decisoes):
     """Registra as decisoes tomadas, nao so o resultado final."""
     info = {
@@ -98,7 +98,7 @@ def registrar(nome_serie, origem, destino, antes, depois, decisoes):
     with caminho.open("a", encoding="utf-8") as f:
         f.write(json.dumps(info, ensure_ascii=False) + "\n")
 
-
+    # Realiza a chamada das funções na ordem correta, para cada série
 def processar(nome_serie):
     df, origem = carregar(nome_serie)
     antes = len(df)

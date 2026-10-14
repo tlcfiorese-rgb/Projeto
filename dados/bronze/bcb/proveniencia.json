@@ -11,9 +11,9 @@
     "data_final": "15/08/2026"
   },
   "arquivos_bronze": [
-    "selic_20260820.json",
-    "cambio_20260820.json",
-    "ipca_20260820.json"
+    "selic_20260930.json",
+    "cambio_20260930.json",
+    "ipca_20260930.json"
   ],
-  "extraido_em": "2026-08-20T17:43:09.069914"
+  "extraido_em": "2026-09-30T18:59:15.339310"
 }

@@ -1,3 +1,4 @@
+# Realiza a leitura das Parquet e as altera para criar atributos derivados, que respondem melhor a pergunta norteadora.
 """Atributos derivados para as series do BCB.
 Le a Prata (ja tipada e conferida na aula passada), cria colunas
 que respondem melhor a pergunta norteadora, e regrava a Prata."""
@@ -10,7 +11,7 @@ import pandas as pd
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 PRATA = RAIZ_PROJETO / "dados" / "prata"
 
-
+    # Variação percentual diária - captura dias de mudança (ex: decisão do COPOM)
 def variacao_pct(df, coluna):
     """Variacao percentual em relacao ao registro anterior, na mesma serie.
     O sort_values garante que a variacao e calculada contra o dia
@@ -19,7 +20,7 @@ def variacao_pct(df, coluna):
     df[coluna + "_variacao_pct"] = df[coluna].pct_change() * 100
     return df
 
-
+    # Inflação acumulada em 12 meses (juros compostos) - só faz sentido para séries mensais, como o IPCA
 def acumulado_12m(df, coluna):
     """Inflacao acumulada nos ultimos 12 meses (juros compostos).
     So faz sentido para series mensais, como o IPCA."""
@@ -30,7 +31,7 @@ def acumulado_12m(df, coluna):
     ) * 100
     return df
 
-
+    # Cada processar le o parquet, chama as funções acima para criar novas colunas e salva no mesmo arquivo
 def processar_selic():
     df = pd.read_parquet(PRATA / "selic.parquet")
     antes = df.shape[1]
@@ -54,7 +55,7 @@ def processar_ipca():
     df.to_parquet(PRATA / "ipca.parquet", index=False)
     return df, antes
 
-
+    # Registra as decisões tomadas, não só o resultado final
 def registrar(decisoes):
     info = {
         "etapa": "atributos_derivados",
