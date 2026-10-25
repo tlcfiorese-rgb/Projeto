@@ -1,3 +1,30 @@
+# Selic, cambio e IPCA: juros e o investidor de renda fixa
+
+Pergunta norteadora: existe correlacao entre Selic alta e valorizacao
+do real frente ao dolar, e como isso afeta o investidor de renda fixa
+que aplica em CDB/Tesouro?
+
+## Fontes
+
+| Fonte | Formato | Acesso | Series |
+|---|---|---|---|
+| Banco Central do Brasil (SGS) | JSON | API aberta, sem chave | Selic meta (432), cambio USD/BRL (1), IPCA mensal (433) |
+
+Janela de extracao: ultimos 10 anos ate a data em que o script roda.
+Fonte secundaria candidata: CVM Dados Abertos (Informe Diario de
+fundos), ainda nao ingerida.
+
+## Como rodar
+
+    python src/ingerir.py
+    python src/transformar_bcb.py
+    python src/atributos_bcb.py
+    python src/enriquecer_bcb.py
+
+O src/explorar_bcb.py gera os relatorios de diagnostico e e opcional.
+A bronze (JSONs brutos) nao e versionada: recria-se com ingerir.py.
+O proveniencia.json da bronze e o da prata ficam versionados.
+
 ## Defeitos conhecidos das fontes
 
 ### Banco Central (BCB)
@@ -7,6 +34,10 @@
   grafico de dispersao ilegivel em vez de histograma.
 - IPCA tem valores negativos em alguns meses, o que e esperado
   (representa deflacao), nao e erro do dado.
+- A API devolve resposta vazia (status 200, sem corpo) quando a
+  requisicao nao traz um User-Agent de navegador. O ingerir.py envia
+  esse cabecalho.
+- A consulta por periodo e limitada a 10 anos por chamada.
 
 ## Decisões de tratamento
 
@@ -52,3 +83,29 @@ Inflacao acumulada em 12 meses (juros compostos), a metrica padrao de
 mercado para comparar com a Selic. Ausente nos primeiros 11 meses da
 serie, por definicao (nao ha 12 meses anteriores para acumular).
 Valores recentes (mar-jul/2026) na faixa de 4,1% a 4,7%.
+
+## Juncao
+Selic, cambio e IPCA juntados por mes (chave 'mes'), com how=left a
+partir da Selic e validate=one_to_one. Selic e cambio foram levados de
+diario para mensal (ultimo valor do mes) antes da juncao.
+
+- Linhas na Selic mensal: 121
+- Linhas no resultado: 121
+- Sem par no cambio: 0
+- Sem par no IPCA: 0
+
+### Quem nao casou
+- out/2026: o IPCA do mes corrente ainda nao foi divulgado. Mantido,
+  com IPCA ausente.
+
+Isso se repete a cada extracao: o mes em curso fica sem IPCA.
+Os meses das pontas sao incompletos na Selic e no cambio, mas usamos o
+ultimo valor disponivel do mes. Numeros da extracao de 25/10/2026.
+
+### Atributo derivado apos a juncao
+juro_real_12m: taxa real ex-post, (1 + Selic) / (1 + IPCA acumulado 12m)
+- 1, em %. So existe depois da juncao, porque usa a Selic e o IPCA,
+que vinham de tabelas separadas. Responde a pergunta norteadora: quanto
+o investidor de renda fixa ganha acima da inflacao. Ausente nos
+primeiros 11 meses, onde o IPCA acumulado nao existe.
+Resultado: dados/prata/indicadores_mensais.parquet.

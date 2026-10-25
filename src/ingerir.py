@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
 import requests
 
@@ -17,9 +17,18 @@ SERIES = {
     "ipca": 433,
 }
 
-DATA_INICIAL = "16/08/2016"
-DATA_FINAL = "15/08/2026"
+HOJE = date.today()
 
+def dez_anos_antes(d):
+    """Mesmo dia, 10 anos atras (29/02 vira 28/02)."""
+    try:
+        return d.replace(year=d.year - 10)
+    except ValueError:
+        return d.replace(year=d.year - 10, day=28)
+
+
+DATA_FINAL = HOJE.strftime("%d/%m/%Y")
+DATA_INICIAL = (dez_anos_antes(HOJE) + timedelta(days=1)).strftime("%d/%m/%Y")
 
     # Chama a API do BC e traz os dados brutos
 def buscar(codigo): 

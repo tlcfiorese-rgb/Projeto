@@ -5,3 +5,5 @@ dados/ouro/*
 __pycache__/
 kaggle.json
 !dados/prata/proveniencia.jsonl
+dados/bronze/**/*.json
+!dados/bronze/**/proveniencia.json
