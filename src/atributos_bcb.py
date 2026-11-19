@@ -4,12 +4,13 @@ Le a Prata (ja tipada e conferida na aula passada), cria colunas
 que respondem melhor a pergunta norteadora, e regrava a Prata."""
 
 import json
+import logging
 from datetime import datetime
-from pathlib import Path
 import pandas as pd
 
-RAIZ_PROJETO = Path(__file__).resolve().parent.parent
-PRATA = RAIZ_PROJETO / "dados" / "prata"
+from config import PRATA
+
+log = logging.getLogger(__name__)
 
     # Variação percentual diária - captura dias de mudança (ex: decisão do COPOM)
 def variacao_pct(df, coluna):
@@ -69,14 +70,15 @@ def registrar(decisoes):
 
 def main():
     df_selic, cols_antes = processar_selic()
-    print("selic: colunas", cols_antes, "->", df_selic.shape[1])
+    log.info("selic: colunas %d -> %d", cols_antes, df_selic.shape[1])
 
     df_cambio, cols_antes = processar_cambio()
-    print("cambio: colunas", cols_antes, "->", df_cambio.shape[1])
+    log.info("cambio: colunas %d -> %d", cols_antes, df_cambio.shape[1])
 
     df_ipca, cols_antes = processar_ipca()
-    print("ipca: colunas", cols_antes, "->", df_ipca.shape[1])
-    print(df_ipca[["data", "valor", "valor_acumulado_12m"]].tail(5))
+    log.info("ipca: colunas %d -> %d", cols_antes, df_ipca.shape[1])
+    log.debug("ipca, ultimas linhas:\n%s",
+              df_ipca[["data", "valor", "valor_acumulado_12m"]].tail(5))
 
     registrar([
         "selic: coluna 'valor_variacao_pct' criada (variacao diaria, "
@@ -87,8 +89,10 @@ def main():
         "em 12 meses, juros compostos; ausente nos primeiros 11 meses "
         "da serie, por definicao)",
     ])
-    print("\nAtributos derivados registrados na proveniencia.")
+    log.info("atributos derivados registrados na proveniencia")
 
 
 if __name__ == "__main__":
+    from config import configurar_log
+    configurar_log()
     main()

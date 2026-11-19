@@ -1,0 +1,47 @@
+version: 2
+
+sources:
+  - name: prata
+    schema: prata
+    description: >
+      Camada Prata carregada no DuckDB por src/carga.py. Origem: Banco Central
+      do Brasil, Sistema Gerenciador de Series Temporais (SGS), API aberta.
+    tables:
+      - name: selic
+        description: Meta Selic diaria (SGS 432), em % ao ano. Uma linha por dia.
+        meta: {codigo_sgs: 432}
+        columns:
+          - name: data
+            description: Dia da observacao.
+            data_tests: [unique, not_null]
+          - name: valor
+            description: Meta Selic em % ao ano.
+            data_tests: [not_null]
+      - name: cambio
+        description: Dolar comercial USD/BRL diario (SGS 1), em R$ por US$. So dias uteis.
+        meta: {codigo_sgs: 1}
+        columns:
+          - name: data
+            description: Dia util da cotacao.
+            data_tests: [unique, not_null]
+          - name: valor
+            description: Cotacao em R$ por US$.
+            data_tests: [not_null]
+      - name: ipca
+        description: IPCA, variacao mensal (SGS 433), em %. Uma linha por mes.
+        meta: {codigo_sgs: 433}
+        columns:
+          - name: data
+            description: Primeiro dia do mes de referencia.
+            data_tests: [unique, not_null]
+          - name: valor
+            description: Variacao do IPCA no mes, em %. Pode ser negativa (deflacao).
+            data_tests: [not_null]
+      - name: indicadores_mensais
+        description: >
+          Juncao mensal de Selic, cambio e IPCA feita em src/enriquecer_bcb.py
+          (left a partir da Selic). Entrada da Ouro.
+        columns:
+          - name: mes
+            description: Primeiro dia do mes. Chave da tabela.
+            data_tests: [unique, not_null]

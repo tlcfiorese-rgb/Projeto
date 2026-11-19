@@ -3,12 +3,13 @@ Le a Prata (ja tipada e com atributos) e grava mais uma tabela na Prata.
 Rode antes: transformar_bcb.py e atributos_bcb.py."""
 
 import json
+import logging
 from datetime import datetime
-from pathlib import Path
 import pandas as pd
 
-RAIZ_PROJETO = Path(__file__).resolve().parent.parent
-PRATA = RAIZ_PROJETO / "dados" / "prata"
+from config import PRATA
+
+log = logging.getLogger(__name__)
 
 
 def carregar(nome_serie):
@@ -26,7 +27,7 @@ def selic_mensal(df):
     no fim do mes. A linha passa de 'um dia' para 'um mes'."""
     df = df.sort_values("data").copy()
     df["mes"] = chave_mes(df["data"])
-    print("selic: de", df["data"].min().date(), "a", df["data"].max().date())
+    log.info("selic: de %s a %s", df["data"].min().date(), df["data"].max().date())
     return (df.groupby("mes", as_index=False)["valor"].last()
               .rename(columns={"valor": "selic_meta"}))
 
@@ -36,7 +37,7 @@ def cambio_mensal(df):
     disponivel de cada mes, e a variacao mensal em cima dela."""
     df = df.sort_values("data").copy()
     df["mes"] = chave_mes(df["data"])
-    print("cambio: de", df["data"].min().date(), "a", df["data"].max().date())
+    log.info("cambio: de %s a %s", df["data"].min().date(), df["data"].max().date())
     mensal = (df.groupby("mes", as_index=False)["valor"].last()
                 .rename(columns={"valor": "cambio_fim_mes"}))
     mensal["cambio_variacao_mensal_pct"] = (
@@ -63,12 +64,12 @@ def conferir_chaves(esquerda, direita, nome):
     """Passo 1 da aula: a previsao do que a juncao vai fazer."""
     esq = set(esquerda["mes"])
     dir_ = set(direita["mes"])
-    print(f"[selic x {nome}] so na selic: {len(esq - dir_)}"
-          f" | so em {nome}: {len(dir_ - esq)} | nos dois: {len(esq & dir_)}")
+    log.info("[selic x %s] so na selic: %d | so em %s: %d | nos dois: %d",
+             nome, len(esq - dir_), nome, len(dir_ - esq), len(esq & dir_))
     for mes in sorted(esq - dir_):
-        print("   so na selic:", mes.strftime("%Y-%m"))
+        log.warning("so na selic: %s", mes.strftime("%Y-%m"))
     for mes in sorted(dir_ - esq):
-        print(f"   so em {nome}:", mes.strftime("%Y-%m"))
+        log.warning("so em %s: %s", nome, mes.strftime("%Y-%m"))
 
 
 def juntar(esquerda, direita):
@@ -79,10 +80,10 @@ def juntar(esquerda, direita):
 def validar(esquerda, resultado, coluna_direita):
     """A conta que precisa fechar. Devolve os meses que nao casaram."""
     sem_par = resultado[coluna_direita].isna()
-    print(f"   esquerda: {len(esquerda)} | resultado: {len(resultado)}"
-          f" | sem par em '{coluna_direita}': {int(sem_par.sum())}")
+    log.info("esquerda: %d | resultado: %d | sem par em '%s': %d",
+             len(esquerda), len(resultado), coluna_direita, int(sem_par.sum()))
     if len(resultado) != len(esquerda):
-        print("   ATENCAO: o numero de linhas mudou.")
+        log.warning("o numero de linhas mudou na juncao")
     return resultado[sem_par]
 
 
@@ -101,7 +102,7 @@ def salvar(df):
     PRATA.mkdir(parents=True, exist_ok=True)
     destino = PRATA / "indicadores_mensais.parquet"
     df.to_parquet(destino, index=False)
-    print("salvo em:", destino, df.shape)
+    log.info("salvo em %s %s", destino, df.shape)
     return destino
 
 
@@ -131,26 +132,25 @@ def main():
     cambio = cambio_mensal(carregar("cambio"))
     ipca = ipca_mensal(carregar("ipca"))
 
-    print("\n--- chaves antes da juncao ---")
+    log.info("chaves antes da juncao")
     conferir_chaves(selic, cambio, "cambio")
     conferir_chaves(selic, ipca, "ipca")
 
-    print("\n--- juncao ---")
+    log.info("juncao")
     com_cambio = juntar(selic, cambio)
     sem_par_cambio = validar(selic, com_cambio, "cambio_fim_mes")
     resultado = juntar(com_cambio, ipca)
     sem_par_ipca = validar(selic, resultado, "ipca_mensal")
     if len(sem_par_ipca):
-        print("   meses sem IPCA:",
-              [m.strftime("%Y-%m") for m in sem_par_ipca["mes"]])
+        log.warning("meses sem IPCA: %s",
+                    [m.strftime("%Y-%m") for m in sem_par_ipca["mes"]])
 
     # sem IPCA no mes, a marca de extremo fica ausente (nao 'False')
     resultado["ipca_extremo"] = resultado["ipca_extremo"].astype("boolean")
 
     resultado = juro_real(resultado)
-    print("\njuro_real_12m (min, max):",
-          round(resultado["juro_real_12m"].min(), 2),
-          round(resultado["juro_real_12m"].max(), 2))
+    log.info("juro_real_12m (min, max): %.2f %.2f",
+             resultado["juro_real_12m"].min(), resultado["juro_real_12m"].max())
 
     destino = salvar(resultado)
     registrar(destino, len(selic), len(resultado),
@@ -158,4 +158,6 @@ def main():
 
 
 if __name__ == "__main__":
+    from config import configurar_log
+    configurar_log()
     main()

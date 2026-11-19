@@ -1,13 +1,13 @@
-from pathlib import Path
+"""Profiling opcional: gera relatorios/<serie>.html. Fora do pipeline."""
+
 import json
+import logging
 import pandas as pd
 from data_profiling import ProfileReport
 
-RAIZ_PROJETO = Path(__file__).resolve().parent.parent
-BRONZE = RAIZ_PROJETO / "dados" / "bronze" / "bcb"
-RELATORIOS = RAIZ_PROJETO / "relatorios"
+from config import BRONZE, RELATORIOS, SERIES
 
-SERIES = ["selic", "cambio", "ipca"]
+log = logging.getLogger(__name__)
 
     # Acha o arquivo mais novo da série dentro da bronze
 def mais_recente(nome_serie):
@@ -37,12 +37,13 @@ def gerar(df, nome_serie):
 def main():
     for nome_serie in SERIES:
         caminho = mais_recente(nome_serie)
-        print("perfilando:", caminho.name)
+        log.info("perfilando: %s", caminho.name)
         df = carregar(caminho)
         saida = gerar(df, nome_serie)
-        print("relatorio salvo em:", saida)
-        print()
+        log.info("relatorio salvo em %s", saida)
 
 
 if __name__ == "__main__":
+    from config import configurar_log
+    configurar_log()
     main()

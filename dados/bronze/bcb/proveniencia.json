@@ -7,13 +7,13 @@
     "ipca": 433
   },
   "periodo_consultado": {
-    "data_inicial": "26/10/2016",
-    "data_final": "25/10/2026"
+    "data_inicial": "19/11/2016",
+    "data_final": "18/11/2026"
   },
   "arquivos_bronze": [
-    "selic_20261025.json",
-    "cambio_20261025.json",
-    "ipca_20261025.json"
+    "selic_20261118.json",
+    "cambio_20261118.json",
+    "ipca_20261118.json"
   ],
-  "extraido_em": "2026-10-25T01:20:15.945599"
+  "extraido_em": "2026-11-18T18:40:45.206668"
 }

@@ -7,3 +7,9 @@ kaggle.json
 !dados/prata/proveniencia.jsonl
 dados/bronze/**/*.json
 !dados/bronze/**/proveniencia.json
+pipeline.log
+ecox14/target/
+ecox14/logs/
+ecox14/dbt_packages/
+ecox14/.user.yml
+duckdb.exe

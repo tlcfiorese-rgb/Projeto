@@ -1,0 +1,10 @@
+# Fica dentro do projeto (sem senha nem segredo) e o caminho do banco e
+# relativo a pasta ecox14/, de onde o pipeline chama o dbt.
+# Rodando a mao: cd ecox14 && dbt run --profiles-dir .
+ecox14:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../dados/ouro/projeto.duckdb
+      schema: ouro

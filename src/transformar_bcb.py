@@ -1,13 +1,13 @@
+"""Prata: tipos, chave e extremos (IQR e z-score, marcados e nao removidos)."""
+
 import json
+import logging
 from datetime import datetime
-from pathlib import Path
 import pandas as pd
 
-RAIZ_PROJETO = Path(__file__).resolve().parent.parent
-BRONZE = RAIZ_PROJETO / "dados" / "bronze" / "bcb"
-PRATA = RAIZ_PROJETO / "dados" / "prata"
+from config import BRONZE, PRATA, SERIES
 
-SERIES = ["selic", "cambio", "ipca"]
+log = logging.getLogger(__name__)
 
     # Lê o arquivo mais recente da bronze
 def carregar(nome_serie):
@@ -21,10 +21,9 @@ def carregar(nome_serie):
     dados = json.loads(caminho.read_text())
     df = pd.DataFrame(dados)
 
-    print(f"\n--- {nome_serie} ---")
-    print("lido:", caminho.name, df.shape)
-    print(df.columns.tolist())
-    print(df.isna().sum())
+    log.info("%s: lido %s %s", nome_serie, caminho.name, df.shape)
+    log.debug("%s: colunas %s", nome_serie, df.columns.tolist())
+    log.debug("%s: ausentes por coluna %s", nome_serie, df.isna().sum().to_dict())
 
     return df, caminho
 
@@ -42,9 +41,9 @@ def conferir_chave(df, chave="data"):
     """Numa serie temporal, a chave e a propria data: um valor por dia.
     Chave repetida aqui seria sintoma de erro na extracao, nao normalidade."""
     repetidas = df[chave].duplicated().sum()
-    print("datas repetidas:", repetidas)
     if repetidas:
-        print(df[df[chave].duplicated(keep=False)])
+        log.warning("%d datas repetidas, mantida a primeira de cada", repetidas)
+        log.warning("repetidas:\n%s", df[df[chave].duplicated(keep=False)])
     return df.drop_duplicates(subset=chave)
 
 
@@ -60,7 +59,7 @@ def marcar_extremos(df, coluna):
     juros muito altos (ex: crise de 2015-16) e isso e dado real, nao erro."""
     baixo, alto = limites_iqr(df[coluna])
     df[coluna + "_extremo"] = (df[coluna] < baixo) | (df[coluna] > alto)
-    print(coluna, "extremos (IQR):", df[coluna + "_extremo"].sum())
+    log.info("%s: %d extremos (IQR)", coluna, df[coluna + "_extremo"].sum())
     return df
 
     # Refaz a mesma checagem por outro método, para comparar divergências
@@ -69,7 +68,7 @@ def marcar_zscore(df, coluna, limite=3):
     vale olhar a linha antes de decidir."""
     z = (df[coluna] - df[coluna].mean()) / df[coluna].std()
     df[coluna + "_z"] = z.abs() > limite
-    print(coluna, "z acima de", limite, ":", df[coluna + "_z"].sum())
+    log.info("%s: %d com |z| acima de %s", coluna, df[coluna + "_z"].sum(), limite)
     return df
 
     # Grava a tabela tratada em Parquet, na camada prata
@@ -79,7 +78,7 @@ def salvar(df, nome_serie):
     PRATA.mkdir(parents=True, exist_ok=True)
     destino = PRATA / f"{nome_serie}.parquet"
     df.to_parquet(destino, index=False)
-    print("salvo em:", destino, df.shape)
+    log.info("salvo em %s %s", destino, df.shape)
     return destino
 
     # Registra as decisões tomadas, não só o resultado final
@@ -121,8 +120,10 @@ def processar(nome_serie):
 def main():
     for nome_serie in SERIES:
         processar(nome_serie)
-    print("\nTodas as series processadas!")
+    log.info("todas as series processadas")
 
 
 if __name__ == "__main__":
+    from config import configurar_log
+    configurar_log()
     main()

@@ -1,0 +1,93 @@
+version: 2
+
+models:
+  - name: dim_tempo
+    description: >
+      Dimensao de calendario. Uma linha por mes, do primeiro ao ultimo mes da
+      Prata, sem buracos. Contexto para agrupar e filtrar a fato.
+    columns:
+      - name: mes
+        description: Primeiro dia do mes. Chave primaria.
+        data_tests: [unique, not_null]
+      - name: ano
+        description: Ano do mes.
+        data_tests: [not_null]
+      - name: mes_numero
+        description: Numero do mes, de 1 a 12.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                quote: false
+      - name: trimestre
+        description: Trimestre do ano, de 1 a 4.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+      - name: semestre
+        description: Semestre do ano, 1 ou 2.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+                quote: false
+      - name: ano_mes
+        description: Rotulo aaaa-mm, para eixos de grafico e ordenacao.
+        data_tests: [unique, not_null]
+
+  - name: fato_indicador_mensal
+    description: >
+      Fato. Grao: um mes (uma linha por mes). Reune Selic, cambio e IPCA do mes
+      e o juro real. Nao se soma entre meses: sao niveis, nao fluxos.
+    columns:
+      - name: mes
+        description: Primeiro dia do mes. Chave primaria e chave estrangeira para dim_tempo.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tempo')
+                field: mes
+      - name: selic_meta
+        description: Meta Selic em vigor no ultimo dia do mes, em % ao ano.
+        data_tests: [not_null]
+      - name: cambio_fim_mes
+        description: >
+          Cotacao USD/BRL do ultimo dia util com dado no mes, em R$ por US$. No
+          mes em curso e a cotacao mais recente, nao a de fechamento.
+        data_tests: [not_null]
+      - name: cambio_variacao_mensal_pct
+        description: >
+          Variacao percentual de cambio_fim_mes contra o mes anterior. Negativa
+          = real valorizado. Ausente no primeiro mes da serie.
+      - name: ipca_mensal
+        description: >
+          IPCA do mes, em %. Ausente no mes em curso, porque o IBGE ainda nao
+          divulgou (ver teste ipca_ausente_so_no_mes_corrente).
+      - name: ipca_extremo
+        description: >
+          Marca o IPCA mensal fora do corte por IQR. Nenhum foi removido: cada
+          um corresponde a um evento economico real (ver README).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+      - name: ipca_acumulado_12m
+        description: IPCA acumulado em 12 meses (juros compostos), em %. Ausente nos 11 primeiros meses.
+      - name: juro_real_12m
+        description: >
+          Juro real ex-post, em % ao ano: (1 + Selic) / (1 + IPCA acumulado 12m) - 1.
+          Quanto o investidor de renda fixa ganha acima da inflacao.
+
+  - name: vw_indicador_completo
+    description: Tabela achatada para consumo (fato + calendario), derivada da estrela. O grao e um mes.
+
+  - name: vw_correlacao_selic_dolar
+    description: >
+      Uma linha com as correlacoes de Pearson que respondem a pergunta norteadora,
+      sobre toda a janela. Valorizacao do real = queda do USD/BRL.

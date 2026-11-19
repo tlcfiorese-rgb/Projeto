@@ -1,100 +1,120 @@
-from pathlib import Path
-from datetime import date, datetime, timedelta
+"""Ingestao (Bronze): baixa as series do SGS e grava o JSON bruto, datado."""
+
 import json
+import logging
+import time
+from datetime import date, datetime, timedelta
+
 import requests
+
+from config import ANOS_JANELA, BRONZE, SERIES
+
+log = logging.getLogger(__name__)
 
 URL_BASE = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
 
-BRONZE = Path("dados/bronze/bcb")
-
+# Sem um User-Agent de navegador a API responde 200 com corpo vazio.
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
 
-SERIES = {
-    "selic": 432,
-    "cambio": 1,
-    "ipca": 433,
-}
+TENTATIVAS = 3
+ESPERA_BASE_S = 2
 
-HOJE = date.today()
 
-def dez_anos_antes(d):
-    """Mesmo dia, 10 anos atras (29/02 vira 28/02)."""
+def anos_antes(d, anos):
+    """Mesmo dia, 'anos' anos atras (29/02 vira 28/02)."""
     try:
-        return d.replace(year=d.year - 10)
+        return d.replace(year=d.year - anos)
     except ValueError:
-        return d.replace(year=d.year - 10, day=28)
+        return d.replace(year=d.year - anos, day=28)
 
 
-DATA_FINAL = HOJE.strftime("%d/%m/%Y")
-DATA_INICIAL = (dez_anos_antes(HOJE) + timedelta(days=1)).strftime("%d/%m/%Y")
+def periodo(hoje=None):
+    """Janela movel: de (hoje - ANOS_JANELA + 1 dia) ate hoje, em dd/mm/aaaa."""
+    hoje = hoje or date.today()
+    inicial = anos_antes(hoje, ANOS_JANELA) + timedelta(days=1)
+    return inicial.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
 
-    # Chama a API do BC e traz os dados brutos
-def buscar(codigo): 
-    """Busca uma serie na API do Banco Central, sem alterar nada."""
+
+def buscar(codigo, data_inicial, data_final):
+    """Busca uma serie na API do Banco Central, sem alterar nada.
+    Repete em caso de timeout, com espera crescente; outros erros sobem."""
     params = {
         "formato": "json",
-        "dataInicial": DATA_INICIAL,
-        "dataFinal": DATA_FINAL,
+        "dataInicial": data_inicial,
+        "dataFinal": data_final,
     }
-    r = requests.get(
-        URL_BASE.format(codigo=codigo),
-        params=params,
-        headers=HEADERS,
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            r = requests.get(
+                URL_BASE.format(codigo=codigo),
+                params=params,
+                headers=HEADERS,
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.Timeout:
+            if tentativa == TENTATIVAS:
+                log.error("serie %s: timeout nas %d tentativas", codigo, TENTATIVAS)
+                raise
+            espera = ESPERA_BASE_S * 2 ** (tentativa - 1)
+            log.warning("serie %s: timeout (tentativa %d/%d), nova tentativa em %ds",
+                        codigo, tentativa, TENTATIVAS, espera)
+            time.sleep(espera)
 
 
-    # Confere se a resposta não veio vazia, antes de salvar
-def conferir(dados, nome_serie): 
+def conferir(dados, nome_serie):
     """Confere se a resposta veio como esperado antes de salvar."""
-    print(f"{nome_serie}: {len(dados)} registros recebidos")
+    log.info("%s: %d registros recebidos", nome_serie, len(dados))
     if len(dados) == 0:
         raise ValueError(f"{nome_serie} veio vazia, verifique a URL/datas")
     return dados
 
-    # Grava o JSON bruto, com data no nome do arquivo
+
 def salvar(dados, nome_serie):
     """Salva o JSON bruto na bronze, exatamente como veio da fonte."""
     BRONZE.mkdir(parents=True, exist_ok=True)
     hoje = date.today().strftime("%Y%m%d")
     destino = BRONZE / f"{nome_serie}_{hoje}.json"
-    destino.write_text(json.dumps(dados, ensure_ascii=False, indent=2))
-    print(f"{nome_serie}: salvo em {destino}")
+    destino.write_text(json.dumps(dados, ensure_ascii=False, indent=2),
+                       encoding="utf-8")
+    log.info("%s: salvo em %s", nome_serie, destino)
     return destino
 
-    # Escreve o arquivo de proveniencia: de onde veio, quando foi extraído
-def registrar(arquivos_gerados):
+
+def registrar(arquivos_gerados, data_inicial, data_final):
     """Registra a proveniencia de toda a extracao (as tres series juntas)."""
     info = {
         "fonte": "Banco Central do Brasil - Sistema Gerenciador de Series Temporais (SGS)",
         "url_base": URL_BASE,
         "series": SERIES,
         "periodo_consultado": {
-            "data_inicial": DATA_INICIAL,
-            "data_final": DATA_FINAL,
+            "data_inicial": data_inicial,
+            "data_final": data_final,
         },
         "arquivos_bronze": [a.name for a in arquivos_gerados],
         "extraido_em": datetime.now().isoformat(),
     }
-    (BRONZE / "proveniencia.json").write_text(
-        json.dumps(info, ensure_ascii=False, indent=2)
-    )
-    print("proveniencia registrada em", BRONZE / "proveniencia.json")
+    destino = BRONZE / "proveniencia.json"
+    destino.write_text(json.dumps(info, ensure_ascii=False, indent=2),
+                       encoding="utf-8")
+    log.info("proveniencia registrada em %s", destino)
 
 
 def main():
+    data_inicial, data_final = periodo()
+    log.info("janela: %s a %s", data_inicial, data_final)
     arquivos_gerados = []
     for nome_serie, codigo in SERIES.items():
-        dados = buscar(codigo)
+        dados = buscar(codigo, data_inicial, data_final)
         dados = conferir(dados, nome_serie)
-        destino = salvar(dados, nome_serie)
-        arquivos_gerados.append(destino)
-    registrar(arquivos_gerados)
+        arquivos_gerados.append(salvar(dados, nome_serie))
+    registrar(arquivos_gerados, data_inicial, data_final)
 
 
 if __name__ == "__main__":
+    from config import configurar_log
+    configurar_log()
     main()

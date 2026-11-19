@@ -1,0 +1,14 @@
+name: 'ecox14'
+version: '1.0.0'
+config-version: 2
+
+# precisa ser igual ao nome do perfil em profiles.yml
+profile: 'ecox14'
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  ecox14:
+    +materialized: table
